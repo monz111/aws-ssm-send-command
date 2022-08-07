@@ -35,15 +35,16 @@ try {
             for (const _ of checks) {
                 await new Promise(resolve => setTimeout(resolve, inputs.checkStatusFrequency * 1000))
                 const invocation = await ssm.getCommandInvocation({ CommandId, InstanceId }).promise()
+                console.log(invocation)
                 if (invocation.Status === 'Failed') {
+                    core.setOutput("contents", invocation.StandardErrorContent);
                     core.setFailed('Faild')
                     break
                 }
                 else if (invocation.Status === 'Success') {
-                    core.setOutput("output-contents", invocation);
+                    core.setOutput("contents", invocation.StandardOutputContent);
                     break
                 }
-                console.log(invocation)
             }
       }
 
