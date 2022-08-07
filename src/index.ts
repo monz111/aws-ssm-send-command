@@ -1,6 +1,5 @@
 import AWS, { AWSError } from "aws-sdk";
 import * as core from "@actions/core";
-import * as github from "@actions/github";
 import { SendCommandResult } from "aws-sdk/clients/ssm";
 
 try {
@@ -26,12 +25,31 @@ try {
         commands: [inputs.command],
       },
     },
-    (err: AWSError, data: SendCommandResult) => {
-      if (err) throw err;
+    async (err: AWSError, data: SendCommandResult) => {
+      if (err || !data.Command?.CommandId) throw err;
+
+      const CommandId =  data.Command.CommandId
+      const checks = new Array(inputs.checkStatusLimit).fill(1)
+
+      for (const InstanceId of inputs.instanceIds) {
+            for (const _ of checks) {
+                await new Promise(resolve => setTimeout(resolve, inputs.checkStatusFrequency * 1000))
+                const invocation = await ssm.getCommandInvocation({ CommandId, InstanceId }).promise()
+                if (invocation.Status === 'Failed') {
+                    core.setFailed('Faild')
+                    break
+                }
+                else if (invocation.Status === 'Success') {
+                    core.setOutput("output-contents", invocation);
+                    break
+                }
+                console.log(invocation)
+            }
+      }
 
       console.log(data);
 
-      core.setOutput("command-id", data.Command?.CommandId);
+      core.setOutput("command-id", CommandId);
     }
   );
 } catch (err) {
@@ -52,11 +70,11 @@ function SanitizeInputs() {
   const _command = core.getInput("command");
   const _workingDirectory = core.getInput("working-directory");
   const _comment = core.getInput("comment");
+  const _checkStatusLimit = core.getInput("check-status-limit");
+  const _checkStatusFrequency = core.getInput("check-status-frequency");
 
   // customized not supported yet, will be updated soon.
   const _documentName = "AWS-RunShellScript";
-  const _outputS3BucketName = "your-s3-bucket-name";
-  const _outputS3KeyPrefix = "your-s3-bucket-directory-name";
 
   return {
     accessKeyId: _accessKeyId,
@@ -67,5 +85,7 @@ function SanitizeInputs() {
     documentName: _documentName,
     workingDirectory: _workingDirectory,
     comment: _comment,
+    checkStatusLimit: +_checkStatusLimit || 0,
+    checkStatusFrequency: +_checkStatusFrequency || 1
   };
 }

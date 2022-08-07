@@ -32,6 +32,12 @@ inputs:
     required: false
     description: "Comment for Send-Command"
     default: "Executed by Github Actions"
+  check-status-limit:
+    required: false
+    description: "Number of times to check for Status"
+  check-status-frequency:
+      required: false
+      description: "Frequency in seconds to check for status"
 
 runs:
   using: "node12"
