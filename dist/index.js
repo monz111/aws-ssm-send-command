@@ -63,7 +63,8 @@ try {
                 yield new Promise(resolve => setTimeout(resolve, inputs.checkStatusFrequency * 1000));
                 const invocation = yield ssm.getCommandInvocation({ CommandId, InstanceId }).promise();
                 console.log(invocation);
-                core.setOutput("contents", invocation);
+                core.setOutput("contents", invocation.StandardOutputContent);
+                core.setOutput("error-contents", invocation.StandardErrorContent);
                 if (invocation.Status === 'Failed') {
                     core.setFailed('Faild');
                     break;
